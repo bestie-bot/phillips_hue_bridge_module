@@ -1,0 +1,7 @@
+name: phillips_hue_bridge_lights
+main_class: PhillipsHueBridgeLight
+status: inactive,
+level: normal,
+hub_type: phillips_hue_bridge,
+device_type: phillips_hue_bridge_light,
+machine_learning: False
