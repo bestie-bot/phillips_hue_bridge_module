@@ -14,9 +14,7 @@ import db.pgsql_db_utils_create as dbUtils_create
 import db.pgsql_db_utils_read as dbUtils_read
 import db.pgsql_db_utils_delete as dbUtils_delete
 
-
 from .db import delete_phillips_hue_bridge, save_brain_status_hue_bridge, fetch_phillips_bridges, fetch_phillips_active_bridge
-
 
 class PhillipsHueBridgeLight():
     """
@@ -29,11 +27,10 @@ class PhillipsHueBridgeLight():
     """
     def __init__(self, conn):
         self.conn = conn        
-        print(f"[INFO]: Initialized Phillips Hue Bridge Lights main module")
 
         # Set up current logging mechanism
-        logging.basicConfig(filename='logs/phillips_hue_light.log', filemode='w', format='%(created)f - %(message)s')
-
+        self.log = logging.getLogger('modules')
+        self.log.debug("[INFO]: Initialized Phillips Hue Bridge Lights main module")
 
     def authorize_bridge(self, ip):
         """
@@ -56,11 +53,11 @@ class PhillipsHueBridgeLight():
             response = requests.post(url, data=json.dumps(payload), headers=headers)
             response.raise_for_status()
         except HTTPError as http_err:
-            print(f'[ERROR]: HTTP error occurred: {http_err}')
+            log.critical(f'[ERROR]: HTTP error occurred: {http_err}')
             save_brain_status_hue_bridge(self.conn, "Not Found")
             return
         except Exception as err:
-            print(f'[ERROR]: Other error occurred: {err}')
+            self.log.error(f'[ERROR]: Other error occurred: {err}')
             save_brain_status_hue_bridge(self.conn, "Not Found")
             return
         
@@ -77,7 +74,7 @@ class PhillipsHueBridgeLight():
                     return
                 elif key == 'success':
                     # The button is pushed and we got a value
-                    print("[INFO]: Successfully authorized and received token")
+                    self.log.debug("[INFO]: Successfully authorized and received token")
                     username = value['username']
                     return username
 
@@ -106,14 +103,14 @@ class PhillipsHueBridgeLight():
             # keys to return besides the IP
             real_ip, unique_bridge_id_array = request_ssdp_by_key("hue-bridgeid", "80", ["hue-bridgeid"])
         except Exception as err:
-            print(f'[ERROR]: Error on SSDP request: {err}')
+            self.log.error(f'[ERROR]: Error on SSDP request: {err}')
             save_brain_status_hue_bridge(self.conn, "Not Found")
             time.sleep(5)
             return
         
         # Let's also add this here in case there is no error, just a null value return
         if real_ip == None or real_ip == '':
-            print(f'[ERROR]: No error, and no return value on SSDP request')
+            self.log.error(f'[ERROR]: No error, and no return value on SSDP request')
             save_brain_status_hue_bridge(self.conn, "Not Found")
             time.sleep(5)
             return
@@ -159,9 +156,9 @@ class PhillipsHueBridgeLight():
                         )
                         return
                     except:
-                        print("[ERROR]: Challenge saving states in lights.py")
+                        log.warning("[ERROR]: Challenge saving states in lights.py")
         except:
-            print("[ERROR]: Scan for bridge completely failed. Let's sleep.")
+            self.log.error("[ERROR]: Scan for bridge completely failed. Let's sleep.")
             # We're not able to connect to it at all
             time.sleep(5)
             raise
@@ -180,7 +177,7 @@ class PhillipsHueBridgeLight():
             except:
                 raise
         else:
-            print(f"[ERROR]: Error connecting to Phillips Bridge")
+            self.log.error(f"[ERROR]: Error connecting to Phillips Bridge")
             try:
                 self.scan_for_bridge()
                 return
@@ -205,7 +202,7 @@ class PhillipsHueBridgeLight():
             save_brain_status_hue_bridge(self.conn, "Connected")
             return lights_object
         except Exception as err:
-            print(f"[ERROR]: Error retrieving lights object from PhillipsHueBridgeLight.get_lights at {datetime.datetime.now()}")
+            self.log.error(f"[ERROR]: Error retrieving lights object from PhillipsHueBridgeLight.get_lights at {datetime.datetime.now()}")
             save_brain_status_hue_bridge(self.conn, "Not Found")
             return {}
 
@@ -231,10 +228,10 @@ class PhillipsHueBridgeLight():
             for key, value in lights.items():
                 if value["uniqueid"] == unique_id:
                     bridge.lights[key].state(on=state)
-                    print(f"[INFO]: Light {key} \"on\" status is now {state}")
+                    self.log.debug(f"[INFO]: Light {key} \"on\" status is now {state}")
                     break
         except:
-            print(f"[ERROR]: Error changing state of light {unique_id} to {state}")
+            self.log.error(f"[ERROR]: Error changing state of light {unique_id} to {state}")
     
     @RateLimiter(max_calls=1, period=1)
     def _determine_changed_lights(self, old_state):
@@ -268,7 +265,6 @@ class PhillipsHueBridgeLight():
         try:
             lights = self.get_lights()
             event_time = datetime.datetime.now()
-            logging.basicConfig(filename='app.log', filemode='w', format='%(created)f - %(message)s')
 
             if bool(lights) is True:
                 for light in lights:
@@ -281,17 +277,14 @@ class PhillipsHueBridgeLight():
                         if light_id is not None:
                             dbUtils_create.create_action(self.conn, event_time, current_light["state"]["on"], current_light["state"]["reachable"], light_id)
                         else:
-                            logging.warning(f"[ERROR]: Daily save at {event_time}. Light {unique_id} does not exist in the current db.")
-                            print(f"[ERROR]: Daily save at {event_time}. Light {unique_id} does not exist in the current db.")
+                            self.log.error(f"[ERROR]: Daily save at {event_time}. Light {unique_id} does not exist in the current db.")
                     except:
-                        logging.warning(f"[ERROR]: Saving daily light status for {unique_id} on {event_time}")
-                        print(f"[ERROR]: Saving daily light status for {unique_id} on {event_time}")
+                        self.log.error(f"[ERROR]: Saving daily light status for {unique_id} on {event_time}")
 
-            logging.warning(f"[INFO]: Daily save successfully completed at {event_time}")
-            print(f"[INFO]: Daily save successfully completed at {event_time}")
+            self.log.debug(f"[INFO]: Daily save successfully completed at {event_time}")
 
         except:
-            print(f"[ERROR]: Error saving daily values.")
+            self.log.error(f"[ERROR]: Error saving daily values.")
     
     def run(self):
         """
@@ -302,14 +295,19 @@ class PhillipsHueBridgeLight():
         `Void`
 
         """
+        # log = logging.getLogger('modules')
         b = self.bridge_connect()
         old_state = self.get_lights(b)
+
+        self.log.debug(f'[INFO]: Running {b}')
+
 
         while True:
             if b is not None:
                 changed_lights, lights_object = self._determine_changed_lights(old_state)
 
                 if len(changed_lights) == 0:
+                    self.log.debug(f'[INFO]: No changed lights')
                     continue
                 else:
                     # Get current time so it's same for all lights
@@ -317,39 +315,35 @@ class PhillipsHueBridgeLight():
                     
                     # Narrowing down the error states using try/except to establish failure locations
                     for light in changed_lights:
+                        self.log.debug(f"lights {light}")
                         try:
                             unique_id = light["uniqueid"]
                             light_id = dbUtils_read.fetch_item(self.conn, unique_id)
+
                         except:
                             # transliteration doesn't work with object keys it seems
                             on = light["on"]
                             reachable = light["reachable"]
                             light_id = light["id"]
-                            logging.warning(f"[ERROR]: Fetching light_id and unique id for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
-                            print(f"[ERROR]: Fetching light_id and unique id for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
+                            self.log.error(f"[ERROR]: Fetching light_id and unique id for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
                             
                         try:
                             if light_id is not None:
-                                dbUtils_create.create_action(conn, event_time, light["on"], light["reachable"], light_id)
-                                logging.warning(f"[INFO]: Light event recorded at {event_time} for {unique_id}")
-                                print(f"[INFO]: Light event recorded at {event_time} for {unique_id}")
+                                dbUtils_create.create_action(self.conn, event_time=event_time, has_value=0.0, is_on=light["on"], is_reachable=light["reachable"], item_id=light_id)
+                                self.log.debug(f"[INFO]: Light event recorded at {event_time} for {unique_id}")
                             else:
-                                print(f"[Error]: Light_id is none for {unique_id}")
+                                self.log.error(f"[Error]: Light_id is none for {unique_id}")
                                 continue
                         except:
                             # transliteration doesn't work with object keys it seems
                             on = light["on"]
                             reachable = light["reachable"]
                             light_id = light["id"]
-                            logging.warning(f"[ERROR]: Creating light event for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
-                            print(f"[ERROR]: Creating light event for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
+                            self.log.error(f"[ERROR]: Creating light event for {unique_id} at {event_time} in main.py. \n Light on: {on} \n Light reachable: {reachable} \n Light id: {light_id}")
 
                         try:
                             old_state = lights_object
                         except:
-                            logging.warning(f"[Error]: Saving new state failed at {event_time}")
-                            print(f"[Error]: Saving new state failed at {event_time}")
+                            self.log.error(f"[Error]: Saving new state failed at {event_time}")
             else:
                 b = self.bridge_connect()
-
-    

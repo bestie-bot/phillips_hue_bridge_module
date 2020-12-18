@@ -1,5 +1,8 @@
 import datetime
 from django.db import transaction, DatabaseError
+import logging
+
+log = logging.getLogger('modules')
 
 def fetch_phillips_bridges(conn):
     """
@@ -16,7 +19,7 @@ def fetch_phillips_bridges(conn):
         cur.execute(sql)
         return cur.fetchall()
     except Exception as e:
-        print(f"[ERROR]: Fetch phillips hue bridges - {e}")
+        log.error(f"[ERROR]: Fetch phillips hue bridges - {e}")
 
 def fetch_phillips_active_bridge(conn):
     """
@@ -33,7 +36,7 @@ def fetch_phillips_active_bridge(conn):
         access_token, ip_address = cur.fetchone()
         return access_token, ip_address
     except Exception as e:
-        print(f"[ERROR]: Fetch active bridge - {e}")
+        log.error(f"[ERROR]: Fetch active bridge - {e}")
         return None, None
 
 def save_phillips_active_bridge_state(conn, username, value):
@@ -57,10 +60,10 @@ def save_phillips_active_bridge_state(conn, username, value):
         data = cur.fetchone()[0]
         return data
     except DatabaseError as d:
-        print(f"[ERROR]: Save phillips active bridge state DB Error - {d}")
+        log.error(f"[ERROR]: Save phillips active bridge state DB Error - {d}")
         transaction.rollback()
     except Exception as e:
-        print(f"[ERROR]: Save phillips active bridge active state - {e}")
+        log.error(f"[ERROR]: Save phillips active bridge active state - {e}")
 
 def save_phillips_bridge_ip(conn, ip, username):
     """
@@ -81,10 +84,10 @@ def save_phillips_bridge_ip(conn, ip, username):
         data = cur.fetchone()[0]
         return data
     except DatabaseError as d:
-        print(f"[ERROR]: Save phillips active bridge ip DB Error - {d}")
+        log.error(f"[ERROR]: Save phillips active bridge ip DB Error - {d}")
         transaction.rollback()
     except Exception as e:
-        print(f"[ERROR]: Save phillips bridge ip - {e}")
+        log.error(f"[ERROR]: Save phillips bridge ip - {e}")
 
 def save_brain_status_hue_bridge(conn, status):
     """
@@ -105,10 +108,10 @@ def save_brain_status_hue_bridge(conn, status):
         data = cur.fetchone()[0]
         return data
     except DatabaseError as d:
-        print(f"[ERROR]: Save phillips brain_status DB Error - {d}")
+        log.error(f"[ERROR]: Save phillips brain_status DB Error - {d}")
         transaction.rollback()
     except Exception as e:
-        print(f"[ERROR]: Save brain status for hue bridge - {e}")
+        log.error(f"[ERROR]: Save brain status for hue bridge - {e}")
 
 def delete_phillips_hue_bridge(conn):
     """
@@ -124,4 +127,4 @@ def delete_phillips_hue_bridge(conn):
         cur.execute(sql, ())
         return None
     except Exception as e:
-        print(f"[ERROR]: Delete hue bridges - {e}")
+        log.error(f"[ERROR]: Delete hue bridges - {e}")
