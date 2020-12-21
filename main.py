@@ -247,7 +247,10 @@ class PhillipsHueBridgeLight():
                 for old_key, old_light in old_state.items():
                     if new_light["uniqueid"] == old_light["uniqueid"]:
                         if (new_light["state"]["on"] != old_light["state"]["on"] or new_light["state"]["reachable"] != old_light["state"]["reachable"]):
-                            lights_array.append({ "uniqueid": new_light["uniqueid"], "on": new_light["state"]["on"], "reachable": new_light["state"]["reachable"] })
+                            # We changed this to name because the iOS ability to grab
+                            # by serial number is now deprecated. After all, why would Apple
+                            # allow you to make useful things?
+                            lights_array.append({ "uniqueid": new_light["name"], "on": new_light["state"]["on"], "reachable": new_light["state"]["reachable"] })
                             break
                     else:
                         pass
