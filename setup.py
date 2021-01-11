@@ -26,6 +26,7 @@ def run_setup():
                 level="Normal",
                 hub_type="phillips_hue_bridge",
                 device_type="phillips_hue_bridge_light",
+                training_variable1="is_on",
                 machine_learning=False)
 
     except:

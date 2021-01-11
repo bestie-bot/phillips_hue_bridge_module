@@ -53,7 +53,7 @@ class PhillipsHueBridgeLight():
             response = requests.post(url, data=json.dumps(payload), headers=headers)
             response.raise_for_status()
         except HTTPError as http_err:
-            log.critical(f'[ERROR]: HTTP error occurred: {http_err}')
+            self.log.critical(f'[ERROR]: HTTP error occurred: {http_err}')
             save_brain_status_hue_bridge(self.conn, "Not Found")
             return
         except Exception as err:
@@ -275,7 +275,7 @@ class PhillipsHueBridgeLight():
 
                     try:
                         unique_id = current_light["uniqueid"]
-                        light_id = dbUtils_read.fetch_item(self.conn, unique_id)
+                        light_id = dbUtils_read.fetch_item_by_unique_id(self.conn, unique_id)
                         
                         if light_id is not None:
                             dbUtils_create.create_action(self.conn, event_time, current_light["state"]["on"], current_light["state"]["reachable"], light_id)
@@ -321,7 +321,7 @@ class PhillipsHueBridgeLight():
                         self.log.debug(f"lights {light}")
                         try:
                             unique_id = light["uniqueid"]
-                            light_id = dbUtils_read.fetch_item(self.conn, unique_id)
+                            light_id = dbUtils_read.fetch_item_by_unique_id(self.conn, unique_id)
 
                         except:
                             # transliteration doesn't work with object keys it seems
